@@ -1,103 +1,68 @@
-import Image from "next/image";
+import { promises as fs } from 'fs';
+import path from 'path';
+import ChatDisplay from '@/components/ChatDisplay';
+import { parseChat } from '@/utils/chatParser';
 
-export default function Home() {
+async function readChatData() {
+  // Use absolute path for chat directory
+  const chatDirPath = path.resolve(process.cwd(), '..', 'KakaoTalk_Chats_2025-04-21_10.26.15_-1434401820');
+  const chatFilePath = path.join(chatDirPath, 'KakaoTalkChats.txt');
+  const chatText = await fs.readFile(chatFilePath, 'utf8');
+  
+  // Parse the chat data
+  const chatData = parseChat(chatText);
+  
+  return {
+    chatDirPath,
+    chatData
+  };
+}
+
+export default async function Home() {
+  const { chatDirPath, chatData } = await readChatData();
+  
+  // Create symbolic link for images if it doesn't exist
+  const publicPath = path.join(process.cwd(), 'public');
+  const chatImagesPath = path.join(publicPath, 'chat-images');
+  
+  try {
+    // Remove existing symbolic link if it exists
+    try {
+      const stats = await fs.lstat(chatImagesPath);
+      if (stats.isSymbolicLink()) {
+        await fs.unlink(chatImagesPath);
+      }
+    } catch (e) {
+      // Ignore errors if the path doesn't exist
+    }
+
+    // Create public directory if it doesn't exist
+    try {
+      await fs.access(publicPath);
+    } catch {
+      await fs.mkdir(publicPath);
+    }
+    
+    // Create symbolic link using absolute paths
+    await fs.symlink(path.resolve(chatDirPath), path.resolve(chatImagesPath), 'dir');
+    
+    // Log for debugging
+    console.log('Chat images directory linked:', {
+      source: path.resolve(chatDirPath),
+      target: path.resolve(chatImagesPath)
+    });
+  } catch (error) {
+    console.error('Error setting up chat images:', error);
+  }
+  
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    <main className="min-h-screen bg-gray-100 py-8">
+      <ChatDisplay 
+        title={chatData.title}
+        date={chatData.date}
+        messages={chatData.messages}
+        chatDirPath={chatDirPath}
+      />
+    </main>
   );
 }
