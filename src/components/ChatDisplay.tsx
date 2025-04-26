@@ -13,13 +13,13 @@ interface ChatDisplayProps {
 
 export default function ChatDisplay({ title, date, messages, chatDirPath }: ChatDisplayProps) {
   const [visibleMessages, setVisibleMessages] = useState<ChatMessage[]>([]);
-  const [counter, setCounter] = useState(0);
-  const [isCounting, setIsCounting] = useState(false);
   const [displayStartIndex, setDisplayStartIndex] = useState(0);
   const [sliderValue, setSliderValue] = useState(0);
+
   const handleSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSliderValue(Number(event.target.value));
   };
+
   useEffect(() => {
     // Start with a small number of messages and adjust based on screen height
     const initialMessageCount = 10;
@@ -27,24 +27,10 @@ export default function ChatDisplay({ title, date, messages, chatDirPath }: Chat
   }, [messages]);
 
   useEffect(() => {
-    if (isCounting && counter < messages.length) {
-      const timer = setTimeout(() => {
-        setCounter(prev => prev + 1);
-      }, 100); // Increment every 100ms
-      return () => clearTimeout(timer);
-    }
-  }, [counter, isCounting, messages.length]);
-
-  // Update visible messages when counting stops
-  useEffect(() => {
-    
-      const startIndex = Math.min(sliderValue, Math.max(0, messages.length - 10));
-      setDisplayStartIndex(startIndex);
-      setVisibleMessages(messages.slice(startIndex, startIndex + 10));
-
+    const startIndex = Math.min(sliderValue, Math.max(0, messages.length - 10));
+    setDisplayStartIndex(startIndex);
+    setVisibleMessages(messages.slice(startIndex, startIndex + 10));
   }, [sliderValue, messages]);
-
-  // Update visible messages when the slider value changes
 
   let leftColumnMessages: ChatMessage[] = [];
   let rightColumnMessages: ChatMessage[] = [];
@@ -189,11 +175,9 @@ export default function ChatDisplay({ title, date, messages, chatDirPath }: Chat
             />
             <span> {sliderValue}</span>
           </div>
-          {!isCounting && (
-            <div className="text-center text-gray-600 mt-2">
-              Showing messages {displayStartIndex + 1}-{Math.min(displayStartIndex + 10, messages.length)} of {messages.length}
-            </div>
-          )}
+          <div className="text-center text-gray-600 mt-2">
+            Showing messages {displayStartIndex + 1}-{Math.min(displayStartIndex + 10, messages.length)} of {messages.length}
+          </div>
         </div>
       </div>
 
@@ -213,4 +197,4 @@ export default function ChatDisplay({ title, date, messages, chatDirPath }: Chat
       </div>
     </div>
   );
-} 
+}
